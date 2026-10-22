@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant A as Authenticator app
+    participant R as React app
+    participant E as Express API
+    participant M as MongoDB
+
+    U->>R: Security → Enable 2FA
+    R->>E: POST /api/2fa/setup
+    E->>E: speakeasy.generateSecret() → otpauth:// URL → QR (data URL)
+    E->>M: save tempSecret (AES-256-GCM encrypted, 15 min TTL)
+    E-->>R: { qrCodeDataUrl, manualKey }
+    R->>U: show QR code + manual key
+    U->>A: scan QR
+    A-->>U: 6-digit code (rotates every 30 s)
+    U->>R: enter code
+    R->>E: POST /api/2fa/enable { code }
+    E->>E: verify code against tempSecret
+    E->>E: generate 10 backup codes (store SHA-256 hashes)
+    E->>M: enabled=true, secret=tempSecret, lastUsedStep, backupCodes
+    E->>M: revoke all other sessions (they were password-only)
+    E-->>R: { backupCodes (shown once) }
+    R->>U: copy / download / print → confirm saved

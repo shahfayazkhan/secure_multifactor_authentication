@@ -1,0 +1,39 @@
+flowchart TB
+    APP["📱 Authenticator app<br/>Google · Microsoft · Authy · 1Password"]
+
+    subgraph Client["🖥️ Browser — React 18 + Vite"]
+        direction LR
+        UI["Pages<br/>Login · Register · Verify 2FA<br/>Dashboard · Security · Sessions<br/>Activity · Account"]
+        CTX["AuthContext<br/>loading · guest · mfa · authed"]
+        API["api/client.js<br/>fetch + X-CSRF-Token"]
+        UI --> CTX --> API
+    end
+
+    PROXY["Vite dev proxy :5173<br/>/api → PORT from server/.env"]
+
+    subgraph Server["⚙️ Express API — Node.js"]
+        direction LR
+        MW["Middleware<br/>helmet → cors → rate limit →<br/>express-session → passport → CSRF"]
+        ROUTES["Routes<br/>/auth · /2fa<br/>/sessions · /account"]
+        PASS["Passport LocalStrategy<br/>bcrypt · account lockout"]
+        SVC["Services<br/>totp — speakeasy + qrcode<br/>twoFactor · session · audit"]
+        MW --> ROUTES
+        ROUTES --> PASS
+        ROUTES --> SVC
+    end
+
+    subgraph DB["🍃 MongoDB"]
+        direction LR
+        USERS[("users<br/>encrypted TOTP secret<br/>hashed backup codes")]
+        SESS[("sessions<br/>connect-mongo store")]
+        EVENTS[("securityevents<br/>90-day TTL audit log")]
+    end
+
+    APP -. "scan QR · read 6-digit code" .-> UI
+    API -->|"JSON + httpOnly session cookie"| PROXY
+    PROXY --> MW
+    PASS --> USERS
+    SVC --> USERS
+    SVC --> EVENTS
+    MW <-->|"load / save session"| SESS
+    SVC -->|"list · revoke"| SESS

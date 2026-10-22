@@ -1,0 +1,21 @@
+stateDiagram-v2
+    direction LR
+    [*] --> loading: app starts
+    loading --> guest: no session
+    loading --> mfa: 2FA pending
+    loading --> authed: valid session
+
+    guest --> mfa: login, 2FA on
+    guest --> authed: login, 2FA off · register
+    mfa --> authed: valid TOTP / backup code
+    mfa --> guest: cancel · 5 wrong codes · 5 min expiry
+    authed --> guest: session ended
+
+    note right of authed
+        A session ends on:
+        • sign out
+        • 60 min idle (14 days if remembered)
+        • revoked from another device
+        • password changed elsewhere
+        • 30-day absolute limit
+    end note

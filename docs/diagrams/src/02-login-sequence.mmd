@@ -1,0 +1,37 @@
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant R as React app
+    participant E as Express API
+    participant P as Passport (local)
+    participant M as MongoDB
+
+    R->>E: GET /api/auth/session
+    E-->>R: { authenticated:false, csrfToken }
+
+    U->>R: email + password (+ Keep me signed in)
+    R->>E: POST /api/auth/login (X-CSRF-Token)
+    E->>P: authenticate('local')
+    P->>M: find user, bcrypt.compare
+    alt wrong password
+        P->>M: failedLoginAttempts++ (lock after 5)
+        E-->>R: 401 INVALID_CREDENTIALS / 423 ACCOUNT_LOCKED
+    else 2FA disabled
+        E->>E: req.login() → regenerate session id
+        E-->>R: 200 { user, csrfToken }
+    else 2FA enabled
+        E->>E: regenerate session, store pending { userId, expiresAt +5 min }
+        E-->>R: 200 { mfaRequired:true, csrfToken }
+        R->>U: show 6-digit code screen
+        U->>R: TOTP code or backup code
+        R->>E: POST /api/auth/2fa/verify
+        E->>M: verify TOTP (±1 step) — atomic lastUsedStep update<br/>or consume backup code (usedAt)
+        alt invalid / replayed
+            E-->>R: 401 INVALID_CODE (attemptsRemaining)
+        else valid
+            E->>E: req.login() → new session id, device metadata
+            E->>M: audit MFA_SUCCESS
+            E-->>R: 200 { user, session, csrfToken }
+            R->>U: Dashboard
+        end
+    end

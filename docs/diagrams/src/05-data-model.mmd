@@ -1,0 +1,42 @@
+erDiagram
+    USER ||--o{ SESSION : "signed in on"
+    USER ||--o{ SECURITY_EVENT : "audit trail"
+    USER ||--|| TWO_FACTOR : embeds
+    TWO_FACTOR ||--o{ BACKUP_CODE : embeds
+
+    USER {
+        ObjectId _id
+        string name
+        string email "unique, lowercase"
+        string password "bcrypt (12 rounds)"
+        date passwordChangedAt
+        number failedLoginAttempts
+        date lockUntil
+        date lastLoginAt
+    }
+    TWO_FACTOR {
+        bool enabled
+        string secret "AES-256-GCM encrypted"
+        string tempSecret "during enrollment"
+        number lastUsedStep "replay protection"
+        date enabledAt
+    }
+    BACKUP_CODE {
+        string hash "SHA-256"
+        date usedAt "null until used"
+    }
+    SESSION {
+        string _id "session id"
+        date expires
+        object passport "user id"
+        object meta "browser, os, ip, createdAt, lastSeenAt, remember, mfa"
+        string csrfToken
+    }
+    SECURITY_EVENT {
+        ObjectId user
+        string type "LOGIN_SUCCESS, MFA_FAILED, ..."
+        string ip
+        string browser
+        string os
+        date createdAt "TTL 90 days"
+    }
