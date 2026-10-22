@@ -1,0 +1,19 @@
+{
+  "name": "multi-factor-authentication",
+  "private": true,
+  "version": "1.0.0",
+  "description": "React + Express/Passport/Mongoose app with TOTP two-factor authentication",
+  "scripts": {
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "dev": "concurrently -n api,web -c blue,magenta \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "test:e2e": "node server/scripts/e2e.js",
+    "mongo:up": "docker compose up -d mongo",
+    "mongo:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
